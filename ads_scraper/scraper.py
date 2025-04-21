@@ -14,6 +14,7 @@ from selenium.webdriver.chrome.options import Options  # headless mode
 def extract_facebook_ad_data(url):
     print("[STEP] Starting ChromeDriver setup...")
     driver = None  # Initialize driver variable to ensure it's defined
+    page_source = ""  # Initialize page_source to ensure it has a value
     try:
         # Set up options for headless mode
         options = Options()
@@ -52,6 +53,11 @@ def extract_facebook_ad_data(url):
     finally:
         if driver:
             driver.quit()  # Quit browser only if driver was created
+
+    # Check if the page_source has been assigned, and only proceed if it is not empty
+    if not page_source:
+        print("[ERROR] No page source was retrieved.")
+        return []
 
     # Parse the page source using BeautifulSoup
     soup = BeautifulSoup(page_source, 'html.parser')

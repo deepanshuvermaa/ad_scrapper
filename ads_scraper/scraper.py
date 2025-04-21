@@ -1,30 +1,29 @@
-from selenium import webdriver  # automates the chrome browser using selenium
+from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from webdriver_manager.chrome import ChromeDriverManager  # automatically downloads the correct ChromeDriver
-import time  # add delays during scrolling
-import requests  # for downloading media
-from urllib.parse import urlparse  # to clean up and extract filenames from URLs
+from webdriver_manager.chrome import ChromeDriverManager
+import time
+import requests
 from bs4 import BeautifulSoup
-import re  # regex to find video URLs
-from selenium.webdriver.chrome.options import Options  # headless mode
+from selenium.webdriver.chrome.options import Options
+import re
 
 def extract_facebook_ad_data(url):
     print("[STEP] Starting ChromeDriver setup...")
-    driver = None  # Initialize driver variable to ensure it's defined
-    page_source = ""  # Initialize page_source to ensure it has a value
+    driver = None
+    page_source = ""
     try:
         # Set up options for headless mode
         options = Options()
         options.add_argument('--headless')  # Run in headless mode (no UI)
-        options.add_argument('--no-sandbox')  # Fix for running in Docker/CI environments
-        options.add_argument('--disable-dev-shm-usage')  # Disable shared memory usage
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
 
         # Start ChromeDriver service with headless options
         service = Service(ChromeDriverManager().install())
-        driver = webdriver.Chrome(service=service, options=options)  # Initialize driver with options
+        driver = webdriver.Chrome(service=service, options=options)
         driver.set_window_size(1200, 800)
         driver.get(url)
 
@@ -54,15 +53,19 @@ def extract_facebook_ad_data(url):
         if driver:
             driver.quit()  # Quit browser only if driver was created
 
-    # Check if the page_source has been assigned, and only proceed if it is not empty
+    # Debug: Print page_source length
     if not page_source:
         print("[ERROR] No page source was retrieved.")
         return []
 
     # Parse the page source using BeautifulSoup
     soup = BeautifulSoup(page_source, 'html.parser')
+    print(f"[DEBUG] Soup object created. Length of page_source: {len(page_source)} characters.")
+    
     ads = soup.find_all('div', class_='xh8yej3')
-    print(f"[INFO] Found {len(ads)} ad(s).")
+
+    # Debug: Check if ads were found
+    print(f"[DEBUG] Found {len(ads)} ad(s).")
 
     ad_data = []
 
@@ -70,37 +73,30 @@ def extract_facebook_ad_data(url):
     for index, ad in enumerate(ads):
         ad_info = {}
 
-        # Extract Library ID
         try:
             library_id = ad.find('div', class_='xt0e3qv')
             if library_id:
                 ad_info['Library ID'] = library_id.get_text(strip=True)
         except: pass
 
-        # Extract Description
         try:
             description = ad.find('div', class_='x6ikm8r x10wlt62')
             if description:
                 ad_info['Description'] = description.get_text(strip=True)
         except: pass
 
-        # Extract Image URL
         try:
             image_container = ad.find('div', class_='x1ywc1zp x78zum5 xl56j7k x1e56ztr x1277o0a')
             if image_container:
                 img_tag = image_container.find('img', src=True)
                 if img_tag and img_tag['src']:
                     image_url = img_tag['src']
-                    print(f"[DATA] Image URL: {image_url}")
                     ad_info['Image URL'] = image_url
-                else:
-                    print("[WARN] <img> tag found but no src attribute.")
             else:
                 print("[WARN] Image container div not found.")
         except Exception as e:
             print(f"[ERROR] Exception while extracting image URL: {e}")
 
-        # Extract Video URL
         try:
             video_tag = ad.find('video', src=re.compile(r"^https://video\.fde"))
             if video_tag:
@@ -108,7 +104,6 @@ def extract_facebook_ad_data(url):
                 ad_info['Video URL'] = video_url
         except: pass
 
-        # Extract Backlink URL
         try:
             container = ad.find('div', class_='x6ikm8r x10wlt62')
             a_tag = container.find('a', href=True)
@@ -116,7 +111,11 @@ def extract_facebook_ad_data(url):
                 ad_info['Backlink URL'] = a_tag['href']
         except: pass
 
-        if any(ad_info.values()):  # Append valid ad data
+        if any(ad_info.values()):
             ad_data.append(ad_info)
+
+    if not ad_data:
+        print("[ERROR] No valid ad data found.")
+        return []
 
     return ad_data  # Return the complete list

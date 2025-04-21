@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facebook Ad Scraper</title>
+    <style>
+        /* Global styles */
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            text-align: center;
+        }
+
+        h1 {
+            color: #2C3E50;
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+        }
+
+        /* Form container */
+        .form-container {
+            background-color: white;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    padding: 60px;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 700px;
+    margin: 0 34px;
+        }
+
+        /* Input field */
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            margin-bottom: 20px;
+            font-size: 1rem;
+            background-color: #f5f5f5;
+            transition: all 0.3s;
+        }
+
+        input[type="text"]:focus {
+            border-color: #3498db;
+            background-color: #eaf4fd;
+            outline: none;
+        }
+
+        /* Button */
+        button {
+            padding: 14px 30px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        /* Responsiveness */
+        @media screen and (max-width: 600px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .form-container {
+                width: 100%;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h1>Facebook Ad Scraper</h1>
+        <form action="/scrape" method="POST">
+            <label for="url" style="font-size: 1.1rem; color: #34495e; margin-bottom: 10px; display: block;">Enter Facebook Ad URL:</label>
+            <input type="text" id="url" name="url" placeholder="e.g. https://www.facebook.com/ads/library/" required>
+            <button type="submit">Scrape Ads</button>
+        </form>
+    </div>
+</body>
+</html>

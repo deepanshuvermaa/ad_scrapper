@@ -19,7 +19,7 @@ def extract_facebook_ad_data(url):
         driver.get(url)
 
         print("[STEP] Waiting for ad cards...")
-        WebDriverWait(driver, 60).until(
+        WebDriverWait(driver, 120).until(
             EC.presence_of_element_located((By.CLASS_NAME, 'xh8yej3'))
         )
 

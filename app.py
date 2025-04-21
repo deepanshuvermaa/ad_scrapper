@@ -1,13 +1,13 @@
-from flask import Flask, jsonify, request, send_file
+from flask import Flask, jsonify, request, send_file, render_template
 from ads_scraper.scraper import extract_facebook_ad_data
-from openpyxl import Workbook  # Create a new excel file
-from openpyxl.utils import get_column_letter  # Convert column no. to excel letters
-from datetime import datetime  # Unique filename and timestamps
-import os  # Used to check file paths and folders
+from openpyxl import Workbook
+from openpyxl.utils import get_column_letter
+from datetime import datetime
+import os
 
 app = Flask(__name__)
 
-def save_to_excel(ad_data, filename=None):  # Save list of dictionaries
+def save_to_excel(ad_data, filename=None):  
     """Save ad data to Excel with embedded image URLs and video URLs."""
     if not ad_data:
         return None
@@ -16,12 +16,12 @@ def save_to_excel(ad_data, filename=None):  # Save list of dictionaries
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         filename = f"facebook_ads_data_{timestamp}.xlsx"
 
-    wb = Workbook()  # Starts a new excel workbook & names worksheet
+    wb = Workbook()
     ws = wb.active
     ws.title = "Facebook Ads"
 
     headers = ['Library ID', 'Description', 'Image URL', 'Video URL', 'Backlink URL']
-    ws.append(headers)  # Column names in excel file
+    ws.append(headers)
 
     column_widths = [20, 40, 40, 40, 40]
     for i, width in enumerate(column_widths, 1):
@@ -35,8 +35,8 @@ def save_to_excel(ad_data, filename=None):  # Save list of dictionaries
         row = [
             ad.get('Library ID', ''),
             ad.get('Description', ''),
-            image_url,  # Image URL goes here
-            video_url,  # Video URL goes here
+            image_url,
+            video_url,
             backlink_url
         ]
         ws.append(row)
@@ -46,10 +46,16 @@ def save_to_excel(ad_data, filename=None):  # Save list of dictionaries
     return file_path
 
 
-@app.route('/scrape', methods=['GET'])
+@app.route('/')
+def home():
+    # Render the HTML form for URL input
+    return render_template('index.html')
+
+
+@app.route('/scrape', methods=['POST'])
 def scrape_ads():
-    # Get the URL parameter from the request
-    url = request.args.get('url')
+    # Get the URL parameter from the form
+    url = request.form.get('url')
     
     if not url:
         return jsonify({"error": "Please provide a URL parameter"}), 400
@@ -69,5 +75,5 @@ def scrape_ads():
         return jsonify({"error": "No data was extracted"}), 500
 
 
-#if __name__ == '__main__':
-    #app.run(debug=True)
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=os.getenv('PORT', 5000))

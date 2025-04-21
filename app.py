@@ -69,5 +69,5 @@ def scrape_ads():
         return jsonify({"error": "No data was extracted"}), 500
 
 
-if __name__ == '__main__':
-    app.run(debug=True)
+#if __name__ == '__main__':
+    #app.run(debug=True)

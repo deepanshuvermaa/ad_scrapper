@@ -23,7 +23,7 @@ def save_to_excel(ad_data, filename=None):
     headers = ['Library ID', 'Description', 'Image URL', 'Video URL', 'Backlink URL']
     ws.append(headers)
 
-    column_widths = [20, 40, 40, 40, 40]
+    column_widths = [33, 50, 65, 45, 45]
     for i, width in enumerate(column_widths, 1):
         ws.column_dimensions[get_column_letter(i)].width = width
 

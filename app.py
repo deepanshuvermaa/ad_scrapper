@@ -46,22 +46,22 @@ def save_to_excel(ad_data, filename=None):
     return file_path
 
 
-@app.route('/')
+@app.route('/') #Flask route decorator that maps the / URL (the homepage) to the home() function basically. hamara home page hai
 def home():
     # Render the HTML form for URL input
     return render_template('index.html')
 
 
-@app.route('/scrape', methods=['POST'])
+@app.route('/scrape', methods=['POST']) #jo url hai wo yaha aati hai aur fir ham use visit karte hai 
 def scrape_ads():
     # Get the URL parameter from the form
-    url = request.form.get('url')
+    url = request.form.get('url') # accesses the submitted form data and returns the URL as a string.
     
     if not url:
         return jsonify({"error": "Please provide a URL parameter"}), 400
 
     # Extract ad data using the scraper
-    ad_data = extract_facebook_ad_data(url)
+    ad_data = extract_facebook_ad_data(url) #takes us to scraper.py file and calls the extract_facebook_ad_data function with the provided URL.
     
     if ad_data:
         filename = save_to_excel(ad_data)

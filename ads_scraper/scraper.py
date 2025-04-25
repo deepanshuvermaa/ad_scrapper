@@ -2,7 +2,7 @@ import chromedriver_autoinstaller
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.ui import WebDriverWait #waits for page content to load
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 import time
@@ -14,8 +14,8 @@ import re
 def extract_facebook_ad_data(url):
     print("[STEP] Starting ChromeDriver setup...")
 
-    driver = None
-    page_source = ""
+    driver = None #control the Chrome browser and none isliye kyuki indicate karde ki webdriver ab tak create nhi hua hai specifically
+    page_source = "" #abhi empty hai kyuki page load nahi hua hai aur as empty string hai aur jab scraping shuru hoga tab page source ko update kardega
 
     # Initialize sets to track seen values for each element and avoid duplicates
     seen_library_ids = set()
@@ -25,15 +25,21 @@ def extract_facebook_ad_data(url):
     seen_backlink_urls = set()
 
     try:
-        # Automatically install the appropriate chromedriver
-        chromedriver_autoinstaller.install()
-
         # Set up options for headless mode
         options = Options()
-        options.add_argument('--headless')
+        options.add_argument('--headless=new')
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
-
+        options.add_argument('--disable-gpu')
+        options.add_argument('--window-size=1920,1080')
+        options.add_argument('--disable-notifications')
+        options.add_argument('--disable-extensions')
+        options.add_argument('--disable-infobars')
+        options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36')
+        
+        # Use chromium in Docker
+        options.binary_location = '/usr/bin/chromium'
+        
         # Start ChromeDriver service with headless options
         driver = webdriver.Chrome(options=options)
         driver.set_window_size(1200, 800)
@@ -51,7 +57,7 @@ def extract_facebook_ad_data(url):
 
         # Set up timing for the full 160-second scrolling session
         start_time = time.time()
-        scroll_duration = 160  # seconds
+        scroll_duration = 40  # seconds
         scroll_interval = 2  # seconds between scrolls
         
         print(f"[STEP] Starting {scroll_duration}s scrolling session to load all ads...")
@@ -91,7 +97,7 @@ def extract_facebook_ad_data(url):
 
     finally:
         if driver:
-            driver.quit()
+            driver.quit() # Ensures that the WebDriver (driver) is properly closed
 
     if not page_source:
         print("[ERROR] No page source was retrieved.")
@@ -189,5 +195,6 @@ def extract_facebook_ad_data(url):
     if not ad_data:
         print("[ERROR] No valid ad data found.")
         return []
+    print(f"[INFO] Process completed for URL: {url}")  # Log the URL
 
     return ad_data

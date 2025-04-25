@@ -71,9 +71,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Create a directory for Excel files to be saved
-RUN mkdir -p /app/downloads
-VOLUME /app/downloads
 
 # Expose the port the app runs on
 EXPOSE 5000

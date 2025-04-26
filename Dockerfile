@@ -22,8 +22,6 @@ RUN apt-get update && apt-get install -y \
     libdbus-1-3 \
     libexpat1 \
     libfontconfig1 \
-    libgcc1 \
-    libgconf-2-4 \
     libgdk-pixbuf2.0-0 \
     libglib2.0-0 \
     libgtk-3-0 \
@@ -46,7 +44,6 @@ RUN apt-get update && apt-get install -y \
     libxtst6 \
     ca-certificates \
     fonts-liberation \
-    libappindicator1 \
     libnss3 \
     lsb-release \
     xdg-utils \
@@ -64,6 +61,9 @@ ENV DISPLAY=:99
 # Set working directory
 WORKDIR /app
 
+# Create downloads directory
+RUN mkdir -p /app/downloads && chmod 777 /app/downloads
+
 # Copy requirements first for better caching
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
@@ -71,9 +71,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
+# Make sure the application files are owned by the non-root user
+RUN chmod -R 755 /app
 
 # Expose the port the app runs on
 EXPOSE 5000
 
-# Command to run the application
-CMD ["python", "app.py"]
+# Use environment variables for configuration
+ENV PORT=5000
+
+# Command to run the application with Gunicorn (more reliable than Flask's dev server)
+CMD gunicorn --bind 0.0.0.0:$PORT app:app

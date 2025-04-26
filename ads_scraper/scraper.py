@@ -2,7 +2,7 @@ import chromedriver_autoinstaller
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait #waits for page content to load
+from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 import time
@@ -10,12 +10,21 @@ import requests
 from bs4 import BeautifulSoup
 from selenium.webdriver.chrome.options import Options
 import re
+import os
+import sys
+import logging
+
+# Set up logging to capture detailed error information
+logging.basicConfig(level=logging.INFO, 
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger('facebook_scraper')
 
 def extract_facebook_ad_data(url):
-    print("[STEP] Starting ChromeDriver setup...")
+    logger.info(f"Starting scraping process for URL: {url}")
+    logger.info("Setting up Chrome environment...")
 
-    driver = None #control the Chrome browser and none isliye kyuki indicate karde ki webdriver ab tak create nhi hua hai specifically
-    page_source = "" #abhi empty hai kyuki page load nahi hua hai aur as empty string hai aur jab scraping shuru hoga tab page source ko update kardega
+    driver = None
+    page_source = ""
 
     # Initialize sets to track seen values for each element and avoid duplicates
     seen_library_ids = set()
@@ -37,30 +46,45 @@ def extract_facebook_ad_data(url):
         options.add_argument('--disable-infobars')
         options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36')
         
-        # Use chromium in Docker
-        options.binary_location = '/usr/bin/chromium'
+        # Check if we're running in a containerized environment
+        if os.path.exists('/usr/bin/chromium'):
+            logger.info("Using Chromium from /usr/bin/chromium")
+            options.binary_location = '/usr/bin/chromium'
+        elif os.path.exists('/usr/bin/chromium-browser'):
+            logger.info("Using Chromium from /usr/bin/chromium-browser")
+            options.binary_location = '/usr/bin/chromium-browser'
+        elif os.path.exists('/usr/bin/google-chrome'):
+            logger.info("Using Chrome from /usr/bin/google-chrome")
+            options.binary_location = '/usr/bin/google-chrome'
+        else:
+            logger.info("No explicit binary path set, relying on system defaults")
+            # Don't set binary_location, let Selenium find Chrome/Chromium
         
-        # Start ChromeDriver service with headless options
+        logger.info("Initializing Chrome driver...")
+        # Start Chrome with the configured options
         driver = webdriver.Chrome(options=options)
         driver.set_window_size(1200, 800)
+        
+        logger.info(f"Navigating to URL: {url}")
         driver.get(url)
 
-        print("[STEP] Waiting for initial page load...")
+        logger.info("Waiting for initial page load...")
         # Wait for initial page load (up to 30 seconds)
         try:
             WebDriverWait(driver, 30).until(
                 EC.presence_of_element_located((By.CLASS_NAME, 'xh8yej3'))
             )
-            print("[INFO] Initial ad elements found, beginning timed scrolling...")
-        except:
-            print("[WARN] Initial elements not found within 30s, will continue with scrolling anyway")
+            logger.info("Initial ad elements found, beginning timed scrolling...")
+        except Exception as wait_error:
+            logger.warning(f"Initial elements not found within 30s: {wait_error}")
+            logger.warning("Will continue with scrolling anyway")
 
-        # Set up timing for the full 160-second scrolling session
+        # Set up timing for scrolling session
         start_time = time.time()
-        scroll_duration = 40  # seconds
+        scroll_duration = 40  # seconds - reduced from 160 to 40 for Railway
         scroll_interval = 2  # seconds between scrolls
         
-        print(f"[STEP] Starting {scroll_duration}s scrolling session to load all ads...")
+        logger.info(f"Starting {scroll_duration}s scrolling session to load all ads...")
         
         # Continuously scroll until time is up
         while time.time() - start_time < scroll_duration:
@@ -74,7 +98,7 @@ def extract_facebook_ad_data(url):
             
             # Log progress every ~10 seconds
             if int(elapsed) % 10 == 0:
-                print(f"[INFO] Scrolling in progress: {int(elapsed)}s elapsed, {int(remaining)}s remaining")
+                logger.info(f"Scrolling in progress: {int(elapsed)}s elapsed, {int(remaining)}s remaining")
             
             # Scroll down
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
@@ -87,31 +111,30 @@ def extract_facebook_ad_data(url):
                 time.sleep(1)
                 driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
             
-        print(f"[STEP] Completed {int(time.time() - start_time)}s of scrolling")
+        logger.info(f"Completed {int(time.time() - start_time)}s of scrolling")
         
         # Save the final page source after the full scrolling session
         page_source = driver.page_source
+        logger.info(f"Retrieved page source: {len(page_source)} characters")
 
     except Exception as e:
-        print(f"[ERROR] Selenium error: {e}")
+        logger.error(f"Selenium error: {e}", exc_info=True)
 
     finally:
         if driver:
-            driver.quit() # Ensures that the WebDriver (driver) is properly closed
+            logger.info("Closing Chrome driver")
+            driver.quit()
 
     if not page_source:
-        print("[ERROR] No page source was retrieved.")
+        logger.error("No page source was retrieved.")
         return []
 
-    # Debug: Print page_source length
-    print(f"[DEBUG] Length of page source: {len(page_source)} characters.")
-    
     # Parse the page source using BeautifulSoup
+    logger.info("Parsing page source with BeautifulSoup")
     soup = BeautifulSoup(page_source, 'html.parser')
     ads = soup.find_all('div', class_='xh8yej3')
 
-    # Debug: Check if ads were found
-    print(f"[DEBUG] Found {len(ads)} ad(s).")
+    logger.info(f"Found {len(ads)} ad(s)")
 
     ad_data = []
 
@@ -130,7 +153,7 @@ def extract_facebook_ad_data(url):
                 seen_library_ids.add(ad_info['Library ID'])
 
         except Exception as e:
-            print(f"[ERROR] Exception while extracting Library ID: {e}")
+            logger.error(f"Exception while extracting Library ID: {e}")
 
         try:
             description = ad.find('div', class_='x6ikm8r x10wlt62')
@@ -143,7 +166,7 @@ def extract_facebook_ad_data(url):
                 seen_descriptions.add(ad_info['Description'])
 
         except Exception as e:
-            print(f"[ERROR] Exception while extracting Description: {e}")
+            logger.error(f"Exception while extracting Description: {e}")
 
         try:
             image_container = ad.find('div', class_='x1ywc1zp x78zum5 xl56j7k x1e56ztr x1277o0a')
@@ -159,10 +182,10 @@ def extract_facebook_ad_data(url):
                     seen_image_urls.add(ad_info['Image URL'])
 
         except Exception as e:
-            print(f"[ERROR] Exception while extracting Image URL: {e}")
+            logger.error(f"Exception while extracting Image URL: {e}")
 
         try:
-            video_tag = ad.find('video', src=re.compile(r"^https://video\.fde"))
+            video_tag = ad.find('video', src=re.compile(r"^https://video\."))
             if video_tag:
                 video_url = video_tag['src']
                 ad_info['Video URL'] = video_url
@@ -173,7 +196,7 @@ def extract_facebook_ad_data(url):
                 seen_video_urls.add(ad_info['Video URL'])
 
         except Exception as e:
-            print(f"[ERROR] Exception while extracting Video URL: {e}")
+            logger.error(f"Exception while extracting Video URL: {e}")
 
         try:
             container = ad.find('div', class_='x6ikm8r x10wlt62')
@@ -187,14 +210,14 @@ def extract_facebook_ad_data(url):
                 seen_backlink_urls.add(ad_info['Backlink URL'])
 
         except Exception as e:
-            print(f"[ERROR] Exception while extracting Backlink URL: {e}")
+            logger.error(f"Exception while extracting Backlink URL: {e}")
 
         if any(ad_info.values()):
             ad_data.append(ad_info)
 
     if not ad_data:
-        print("[ERROR] No valid ad data found.")
+        logger.error("No valid ad data found")
         return []
-    print(f"[INFO] Process completed for URL: {url}")  # Log the URL
-
+    
+    logger.info(f"Process completed for URL: {url}. Found {len(ad_data)} unique ads.")
     return ad_data

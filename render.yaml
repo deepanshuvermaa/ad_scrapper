@@ -1,32 +1,104 @@
 services:
+  # Main web service for the Facebook Ads Scraper
   - type: web
-    name: facebook-ad-scraper
-    env: docker
-    region: oregon  # Choose a region closest to your users
-    plan: starter    # Adjust based on your needs (free, starter, etc.)
-    
-    # Build and deployment settings
-    dockerfilePath: ./Dockerfile
-    dockerCommand: Xvfb :99 -screen 0 1280x1024x24 -ac &> /dev/null & gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 8 --timeout 0 app:app
-    
-    # Autoscaling and resource settings (adjust as needed)
+    name: facebook-ads-scraper
+    env: python
+    buildCommand: pip install -r requirements.txt && playwright install chromium && playwright install-deps
+    startCommand: gunicorn --bind 0.0.0.0:$PORT app:app
     autoDeploy: true
-    numInstances: 1
-    
-    # Health check
-    healthCheckPath: /health
-    
-    # Environment variables
+    plan: starter # Choose the appropriate plan based on your needs
+    healthCheckPath: /
     envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0 # Match the version in your Dockerfile
       - key: PORT
-        value: 8080
+        value: 5000
       - key: PYTHONUNBUFFERED
-        value: 1
-      - key: DISPLAY
-        value: :99
+        value: "true"
+      - key: PLAYWRIGHT_BROWSERS_PATH
+        value: "/home/render/.cache/ms-playwright"
     
-    # Disk settings - for file storage
+    # Required for headless browsers to work on Render
+    dockerCommand: |
+      FROM python:3.11-slim
+      
+      # Install Chrome, ChromeDriver and other dependencies
+      RUN apt-get update && apt-get install -y \
+          wget \
+          gnupg \
+          unzip \
+          chromium \
+          chromium-driver \
+          xvfb \
+          build-essential \
+          libssl-dev \
+          libffi-dev \
+          python3-dev \
+          libnss3 \
+          libglib2.0-0 \
+          libasound2 \
+          libatk1.0-0 \
+          libc6 \
+          libcairo2 \
+          libcups2 \
+          libdbus-1-3 \
+          libexpat1 \
+          libfontconfig1 \
+          libgdk-pixbuf2.0-0 \
+          libglib2.0-0 \
+          libgtk-3-0 \
+          libnspr4 \
+          libpango-1.0-0 \
+          libpangocairo-1.0-0 \
+          libstdc++6 \
+          libx11-6 \
+          libx11-xcb1 \
+          libxcb1 \
+          libxcomposite1 \
+          libxcursor1 \
+          libxdamage1 \
+          libxext6 \
+          libxfixes3 \
+          libxi6 \
+          libxrandr2 \
+          libxrender1 \
+          libxss1 \
+          libxtst6 \
+          ca-certificates \
+          fonts-liberation \
+          libnss3 \
+          lsb-release \
+          xdg-utils \
+          && rm -rf /var/lib/apt/lists/*
+      
+      # Set up virtual display
+      ENV DISPLAY=:99
+      
+      # Create and set up working directory
+      WORKDIR /app
+      
+      # Create downloads directory with appropriate permissions
+      RUN mkdir -p /app/downloads && chmod 777 /app/downloads
+      
+      # Copy requirements first for better caching
+      COPY requirements.txt .
+      RUN pip install --no-cache-dir -r requirements.txt
+      
+      # Install Playwright
+      RUN pip install playwright
+      RUN playwright install chromium
+      RUN playwright install-deps
+      
+      # Copy application code
+      COPY . .
+      
+      # Expose the port
+      EXPOSE $PORT
+      
+      # Command to run the application
+      CMD gunicorn --bind 0.0.0.0:$PORT app:app
+
     disk:
-      name: downloads
+      name: scraper-data
       mountPath: /app/downloads
-      sizeGB: 5
+      sizeGB: 1

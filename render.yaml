@@ -15,7 +15,7 @@ services:
     
     # Health check
     healthCheckPath: /health
-    healthCheckTimeout: 30s
+    healthCheckTimeout: /health
     
     # Environment variables
     envVars:

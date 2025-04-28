@@ -4,7 +4,7 @@ services:
     name: facebook-ads-scraper
     env: python
     buildCommand: pip install -r requirements.txt && playwright install chromium && playwright install-deps
-    startCommand: gunicorn --bind 0.0.0.0:$PORT --timeout 180 --workers 1 --threads 2 --max-requests 5 --max-requests-jitter 2 app:app
+    startCommand: gunicorn --bind 0.0.0.0:$PORT -t 60 --keep-alive 60 app:app
     autoDeploy: true
     plan: starter # Choose the appropriate plan based on your needs
     healthCheckPath: /

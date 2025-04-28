@@ -81,7 +81,7 @@ def extract_facebook_ad_data(url):
 
         # Set up timing for scrolling session
         start_time = time.time()
-        scroll_duration = 40  # seconds - reduced from 160 to 40 for Railway
+        scroll_duration = 10  # seconds - reduced from 160 to 40 for Railway
         scroll_interval = 2  # seconds between scrolls
         
         logger.info(f"Starting {scroll_duration}s scrolling session to load all ads...")

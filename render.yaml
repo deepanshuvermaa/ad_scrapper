@@ -4,7 +4,7 @@ services:
     name: facebook-ads-scraper
     env: python
     buildCommand: pip install -r requirements.txt && playwright install chromium && playwright install-deps
-    startCommand: gunicorn --bind 0.0.0.0:$PORT app:app
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --timeout 180 --workers 1 --threads 2 --max-requests 5 --max-requests-jitter 2 app:app
     autoDeploy: true
     plan: starter # Choose the appropriate plan based on your needs
     healthCheckPath: /
@@ -17,6 +17,12 @@ services:
         value: "true"
       - key: PLAYWRIGHT_BROWSERS_PATH
         value: "/home/render/.cache/ms-playwright"
+      - key: MAX_THREADS
+        value: "2"
+      - key: WEB_CONCURRENCY
+        value: "1"
+      - key: GUNICORN_CMD_ARGS
+        value: "--preload"
     
     # Required for headless browsers to work on Render
     dockerCommand: |
@@ -96,7 +102,7 @@ services:
       EXPOSE $PORT
       
       # Command to run the application
-      CMD gunicorn --bind 0.0.0.0:$PORT app:app
+      CMD gunicorn --bind 0.0.0.0:$PORT --timeout 180 --workers 1 --threads 2 --max-requests 5 --max-requests-jitter 2 app:app
 
     disk:
       name: scraper-data
